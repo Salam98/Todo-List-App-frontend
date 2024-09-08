@@ -17,13 +17,13 @@ useEffect( ()=>{
   axios.post(`${BaseURL}/api/todos/checked`,{todoName:todoName,todoCheck:isSelected})
         .then(response => {})
         .catch(error => {});
-},[isSelected])
+},[isSelected],props.reset)
 
 return (
   <View style={styles.item}>
       <View style={styles.itemLeft}>
         <TouchableOpacity 
-          value={isSelected}
+          value={props.check}
           onValueChange={setSelection}
           onPress={()=>setSelection(!isSelected)}
           style= {isSelected?styles.checked:styles.unchecked}>

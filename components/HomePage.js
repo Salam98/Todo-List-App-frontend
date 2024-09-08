@@ -1,34 +1,56 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Keyboard,Button,ScrollView,SafeAreaView,Alert } from 'react-native';
+import {Platform, StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Keyboard,Button,ScrollView,SafeAreaView,Alert } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import{IconButton} from 'react-native-paper';
 import {Task} from './Task';
 import axios from 'axios';
 import BaseURL from '../env';
-import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 export default function HomePage() {
 
-  const[date, setDate] = useState(new Date());
+  const[date, setDate] = useState(new Date().toDateString());
   const[todo, setTodo] = useState();
   const[tasks,setTasks]= useState([]);
   const[editTodo,seteditTodo]= useState();
 
   useEffect(() => {
-    if(tasks.length==0)
-      {
-        axios.get(`${BaseURL}/api/todos/savedTodos`)
-        .then(response => {
-             response.data.forEach(element => setTasks((list)=>[...list,[element.id,element.todo,element.check]]));
-        })
-         .catch(error => {console.log(error);
-      });
-    }
-    else{}
-  },[]);
+    loadTasks(); 
+    resetTasks();
+   },[]);
 
+
+  const loadTasks =()=>{
+      if(tasks.length==0)
+        {
+          axios.get(`${BaseURL}/api/todos/savedTodos`)
+          .then(response => {
+               response.data.forEach(element => setTasks((list)=>[...list,[element.id,element.todo,element.check]]));
+          })
+           .catch(error => {console.log(error);});
+      }
+  }
+
+  const resetTasks = async()=>{
+    try{
+      const savedDate = await AsyncStorage.getItem('lastUpdatedDate');
+      if(savedDate !== null){
+        const parsedDate = JSON.parse(savedDate);
+        if(parsedDate !== date){
+          setTasks([]);
+          tasks.forEach((e,i)=> setTasks(list=>[...list,[e[0],e[1],[e[2]=false]]]))
+          await AsyncStorage.setItem('lastUpdatedDate', JSON.stringify(date));
+        }
+      }else {
+        // If no tasks or date is stored, initialize them
+        await AsyncStorage.setItem('lastUpdatedDate', JSON.stringify(date));
+      }
+    }catch (error) {
+      console.error(error);
+    }
+  }
 
   const addTodo = () =>
   {
@@ -93,13 +115,12 @@ function update(){
   setTodo(null);
 }
 
-
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.container}>
       <View style ={styles.taskWrapper}>
         <Text style={styles.sectionTitle}>Hello Sam! </Text>
-        <Text style={styles.sectionTitle2}>{date.toDateString()}</Text>
+        <Text style={styles.sectionTitle2}>{date}</Text>
         <KeyboardAvoidingView
           behavior= {Platform.OS==='ios'?'padding':'height'}
           style={styles.writTaskWrapper}
@@ -130,12 +151,13 @@ function update(){
       <ScrollView style={styles.scrollView}>
       <View style={styles.items}>
         {
-          tasks.map(([id,title,done])=>{
-            return <Task  key={id} text={title} check={done} edit={()=>edit(title)} deleteTodo={()=>deleteTodo(title)}/>
+          tasks.map(([id,title,check])=>{
+            return <Task  key={id} tasks={tasks}  text={title} check={check} edit={()=>edit(title)} deleteTodo={()=>deleteTodo(title)}/>
           })
         }
       </View>
       </ScrollView>
+
       </SafeAreaView>
     </View>
   );
