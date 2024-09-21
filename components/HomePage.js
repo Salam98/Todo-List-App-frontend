@@ -6,7 +6,7 @@ import{IconButton} from 'react-native-paper';
 import {Task} from './Task';
 import axios from 'axios';
 import BaseURL from '../env';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage" ;
 
 
 export default function HomePage() {
@@ -15,6 +15,7 @@ export default function HomePage() {
   const[todo, setTodo] = useState();
   const[tasks,setTasks]= useState([]);
   const[editTodo,seteditTodo]= useState();
+  const[savedDate,setsavedDate]= useState();
 
   useEffect(() => {
     loadTasks(); 
@@ -35,8 +36,12 @@ export default function HomePage() {
 
   const resetTasks = async()=>{
     try{
-      const savedDate = await AsyncStorage.getItem('lastUpdatedDate');
+      if(savedDate == null){
+          setsavedDate(await AsyncStorage.getItem('lastUpdatedDate'));
+          //console.log(savedDate);
+      }
       if(savedDate !== null){
+        //console.log(savedDate);
         const parsedDate = JSON.parse(savedDate);
         if(parsedDate !== date){
           setTasks([]);
