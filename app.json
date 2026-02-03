@@ -2,6 +2,7 @@
   "expo": {
     "name": "todoList",
     "slug": "todoList",
+    "scheme": "todoList" ,
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,13 +16,17 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "newArchEnabled": true,
+      "bundleIdentifier": "com.salamalhadidi.todolist"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#ffffff",
+        "newArchEnabled": true
+      },
+      "package": "com.salamalhadidi.todolist"
     },
     "web": {
       "favicon": "./assets/favicon.png"

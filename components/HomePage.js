@@ -1,215 +1,197 @@
-import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect } from 'react';
-import {Platform, StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Keyboard,Button,ScrollView,SafeAreaView,Alert } from 'react-native';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import{IconButton} from 'react-native-paper';
-import {Task} from './Task';
-import axios from 'axios';
-import BaseURL from '../env';
-import AsyncStorage from "@react-native-async-storage/async-storage" ;
-
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  KeyboardAvoidingView,
+  TextInput,
+  TouchableOpacity,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Platform,
+  Alert,
+  ImageBackground,
+  Image
+} from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
+import { IconButton } from "react-native-paper";
+import { useRoute, useFocusEffect } from "@react-navigation/native";
+import { useTodos } from "../context/TodoContext";
+import {Task} from "../components/Task";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import LightBackgroundSvg from "../assets/BackgroundSvg.js";
+import DarkBackgroundSvg from "../assets/DarkBackgroundSvg.js";
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '../context/ThemeContext.js';
 
 export default function HomePage() {
 
-  const[date, setDate] = useState(new Date().toDateString());
-  const[todo, setTodo] = useState();
-  const[tasks,setTasks]= useState([]);
-  const[editTodo,seteditTodo]= useState();
-  const[savedDate,setsavedDate]= useState();
+  const { t } = useTranslation();
+   const { theme} = useTheme();
+  const styles = createStyles(theme);
+  // const SvgComponent = isDarkMode ? DarkBackgroundSvg : LightBackgroundSvg;
 
-  useEffect(() => {
-    loadTasks(); 
-    resetTasks();
-   },[]);
+  const {
+    tasks,
+    DailyTasks,
+    generalTasks,
+    addTodo,
+    deleteTodo,
+    update,
+    loadTasks,
+    toggleCheck,
+    clearTasks,
+    formattedDate, 
+    username
+  } = useTodos();
+
+  const route = useRoute();
+  const { type: taskType } = route.params;
+
+  const [date, setDate] = useState(new Date().toDateString());
+  const [todo, setTodo] = useState('');
+  const [editingTodo, setEditingTodo] = useState("");
+  const time = new Date().getHours();
+
+  const dateParts = date.split(" ");
+  const day = dateParts[0];
+  const shortDate = dateParts.slice(1).join(" ");
 
 
-  const loadTasks =()=>{
-      if(tasks.length==0)
-        {
-          axios.get(`${BaseURL}/api/todos/savedTodos`)
-          .then(response => {
-               response.data.forEach(element => setTasks((list)=>[...list,[element.id,element.todo,element.check]]));
-          })
-           .catch(error => {console.log(error);});
-      }
-  }
+  useFocusEffect(
+    React.useCallback(() => {
+      const handleTasks =  () => {
+         loadTasks(taskType); 
+      };
+      handleTasks();
+    }, [taskType])
+  );
 
-  const resetTasks = async()=>{
-    try{
-      if(savedDate == null){
-          setsavedDate(await AsyncStorage.getItem('lastUpdatedDate'));
-          //console.log(savedDate);
-      }
-      if(savedDate !== null){
-        //console.log(savedDate);
-        const parsedDate = JSON.parse(savedDate);
-        if(parsedDate !== date){
-          setTasks([]);
-          tasks.forEach((e,i)=> setTasks(list=>[...list,[e[0],e[1],[e[2]=false]]]))
-          await AsyncStorage.setItem('lastUpdatedDate', JSON.stringify(date));
-        }
-      }else {
-        // If no tasks or date is stored, initialize them
-        await AsyncStorage.setItem('lastUpdatedDate', JSON.stringify(date));
-      }
-    }catch (error) {
-      console.error(error);
-    }
-  }
 
-  const addTodo = () =>
-  {
-    if(tasks.some((array) => array.includes(todo)) || todo==' ')
-    {
-      Alert.alert('Alert','you already have this task (;',[{text: 'Ok'}]);
-    }
-    else{
-        const newTodo= [
-        id= new Date().getTime(),
-        title= todo,
-        check= false,
-      ];
-      Keyboard.dismiss();
-      setTasks([...tasks,newTodo]);
-      setTodo(null);
-      axios.post(`${BaseURL}/api/todos`,
-          {
-              todo: todo,
-              check: false,
-          }
-      )
-      .then(function (response) {})
-      .catch(function (err) {console.log(err.response); })
-    };
-  };
-
-function deleteTodo(d_todo) {
-  axios.post(`${BaseURL}/api/todos/delete`,{ todo:d_todo})
-  .then(response=>{
-    const newTasks= tasks.filter(([id,title,done]) => title !== d_todo);
-    setTasks(newTasks);
-  })
-  .catch(error => {console.log(error);});
+  const handleAdd = () => {
+  addTodo(todo, taskType);
+  setTodo('');
 };
 
-function edit(todo){
-  seteditTodo(todo);
-  setTodo(todo);
-  console.log(todo);
-  console.log(editTodo);
+const handleEdit = (title) => {
+  setEditingTodo(title);
+  setTodo(title);
 };
 
-function update(){
-  const updatedTodo= tasks.map((item) => {
-    if (item[1]==editTodo){
-      console.log(editTodo);
-      console.log(todo);
-      axios.post(`${BaseURL}/api/todos/update`,
-      { 
-        todoToEdit:editTodo, 
-        editedTodo:todo,
-      })
-      .then()
-      .catch(error => {console.log(error);})
-      return [todo,title=todo];
-    }
-    return item
-  });
-  setTasks(updatedTodo);
-  seteditTodo(null);
-  setTodo(null);
-}
+const handleUpdate = () => {
+  update(editingTodo, todo);
+  setEditingTodo('');
+  setTodo('');
+};
 
   return (
     <View style={styles.container}>
+      {/* <SvgComponent style={StyleSheet.absoluteFill} /> */}
       <SafeAreaView style={styles.container}>
-      <View style ={styles.taskWrapper}>
-        <Text style={styles.sectionTitle}>Hello Sam! </Text>
-        <Text style={styles.sectionTitle2}>{date}</Text>
-        <KeyboardAvoidingView
-          behavior= {Platform.OS==='ios'?'padding':'height'}
-          style={styles.writTaskWrapper}
-        >
-        <TextInput style={styles.input} placeholder={'New Day...New Tasks'} onChangeText={(text)=>setTodo(text)} value={todo} ></TextInput>
-        {
-          editTodo?
-          <TouchableOpacity onPress={todo===null?null:()=>update()}>
-          <IconButton
-          icon ='plus-circle-outline'
-          size={35}
-          iconColor='#ae99d2'
-          />
-          </TouchableOpacity>
-          :
-          <TouchableOpacity onPress={todo===null?null:()=>addTodo()}>
-          <IconButton
-          icon ='plus-circle-outline'
-          size={35}
-          iconColor='#ae99d2'
-          />
-          </TouchableOpacity>
-        }
-        </KeyboardAvoidingView>
+        <View style={styles.taskWrapper}>
+          {time < 12 ? (
+            <Text style={styles.sectionTitle}>{t('Good Morning')} {username} 👋</Text>
+          ) : (
+            <Text style={styles.sectionTitle}>{t('Good Evening')} {username} 👋</Text>
+          )}
+         <View style={{flexDirection:'row'}}>
+            <Image source={taskType=='D'?require('../assets/planner.png'):require('../assets/checklist.png')} style={{ width: 35, height: 35 }} />
+            <Text style={styles.sectionTitle2}>{taskType=='D'?t('Daily'):t('my tasks')}</Text>
+          </View>
+ <Text style={styles.sectionTitle3}>{day}, {formattedDate}</Text>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.writTaskWrapper}
+          >
+            <TextInput
+              style={styles.input}
+              placeholder={t('taskPlaceholder')}
+              onChangeText={text => setTodo(text)}
+              value={todo}
+            />
+            <TouchableOpacity onPress={editingTodo ? handleUpdate: handleAdd} disabled={!todo.trim()}>
+              <IconButton icon="plus-circle-outline" size={40} iconColor="#314f3dff" />
+            </TouchableOpacity>   
+          </KeyboardAvoidingView>
+        </View>
 
-      </View>
-
-      <ScrollView style={styles.scrollView}>
-      <View style={styles.items}>
-        {
-          tasks.map(([id,title,check])=>{
-            return <Task  key={id} tasks={tasks}  text={title} check={check} edit={()=>edit(title)} deleteTodo={()=>deleteTodo(title)}/>
-          })
-        }
-      </View>
-      </ScrollView>
-
+        <View style={styles.footer}>
+          <ScrollView style={styles.scrollView}  
+                      showsVerticalScrollIndicator={false}>
+            <View style={styles.items}>
+              {(taskType=='D'? DailyTasks:generalTasks).map(([id, title, check, count, type]) => (
+                <Task
+                  key={id}
+                  text={title}
+                  check={Boolean(check)}
+                  toggleCheck={() => toggleCheck(title, check)} 
+                  edit={() => handleEdit(title)}
+                  deleteTodo={() => deleteTodo(title)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'E8EAED',
+   // backgroundColor: '#bcce96ff',
+   backgroundColor: 'transparent',
   },
-  uncheckType:{
-    marginTop:'3%',
-    bottom: '3%' ,
-    flexDirection:'row',
-    justifyContent:'space-between',
-  },
-  checkAll:{
-    flexDirection: "row",
-    justifyContent:'space-between',
-  },
+
   scrollView: {
-    backgroundColor: '#fff',
-    marginHorizontal: 5,
+    //backgroundColor: 'white',
+    marginHorizontal: 1,
   },
+  footer: {
+    flex: 1,
+   // paddingBottom:125,
+   paddingBottom: 90,
+    backgroundColor: theme.background,
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    //borderRadius:50,
+    paddingTop: 15,
+    paddingHorizontal: 20,
+    opacity: 0.7,
+},
   taskWrapper:{
-    paddingTop:70,
+    paddingTop:'10%',
     paddingHorizontal:20,
   },
   sectionTitle:{
-    fontSize:24,
-    fontWeight:'bold',
-    textAlign: 'center',
+    fontSize:25,
+    //fontWeight:'bold',
+    color: theme.text,
+    marginTop:'2%',
+    marginBottom:'2%',
+   // textAlign: 'center',
   },
   sectionTitle2:{
-    fontSize:20,
-    paddingTop:30,
+    fontSize:25,
+    paddingTop:5,
+    fontWeight: 'bold',
+    marginLeft:'3%',
+    color: theme.text,
+  },
+  sectionTitle3:{
+    fontSize:16,
     fontWeight: 'normal',
-    textAlign: 'center',
+    marginLeft:'1%',
+    color: theme.text,
   },
   items:{
     marginTop:'2%',
-    paddingHorizontal:'3%',
+    paddingHorizontal:'2%',
   },
   writTaskWrapper:{
-    //position:'absolute',
-    marginTop:'10%',
-    bottom: '3%' ,
+    marginTop:'1%',
+    //bottom: '3%' ,
     width:'100%',
     flexDirection:'row',
     justifyContent:'space-around',
@@ -220,9 +202,10 @@ const styles = StyleSheet.create({
     paddingVertical:'1%',
     backgroundColor:'#FFF',
     borderRadius:10,
-    borderColor:'#ae99d2',
+    borderColor:'#314f3dff',
     borderWidth:2,
     width:'85%',
+    height:40,
   },
   addWrapper:{
     justifyContent:'center',
@@ -240,44 +223,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 10,
   },
-  addButton: {
-    backgroundColor: "green",
-  },
-  todoItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  todoText: {
-    fontSize: 16,
-  },
-  deleteButton: {
-    backgroundColor: "red",
-  },
-  item:{
-    backgroundColor: '#FFC1CC',
-    padding: 15,
-    borderRadius:10,
-    flexDirection: 'row',
-    alignItems:'center',
-    justifyContent:'space-between',
-    marginBottom:20,
-  },
-  itemLeft:{
-    flexDirection:'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  unchecked:{
-    width:20 ,
-    height:20,
-    borderColor:'#16247d',
-    borderWidth:2,
-    opacity:0.5,
-    borderRadius:5,
-    marginRight: 5,
-  },
- 
+
 });
+
  
 
